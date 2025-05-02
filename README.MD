@@ -1,120 +1,73 @@
-# PCF8591 Raspberry Pi Examples
+# Smart Plant‑Watering System
 
-Read analog voltage, temperature, or light‑dependent resistor (LDR) inputs on a Raspberry Pi (or any I²C‑capable SBC) using the Philips PCF8591 8‑bit A/D & D/A converter.
+Automated houseplants powered by a Raspberry Pi 4.
 
----
-
-## ✨ Features
-
-* **4× 8‑bit ADC channels** – sample multiple analog sensors
-* **1× 8‑bit DAC output** – generate an analog test signal
-* **Pure‑Python example** – no external libraries beyond `smbus2`
-* **Step‑by‑step setup** – enable I²C, detect the board, wire the circuit
-* Works on **Pi 4 / Pi 5 / Zero 2 W** and most Linux SBCs
+> **Goal:** Keep your plant perfectly watered by monitoring soil moisture, ambient temperature & humidity, and automatically activating a micro‑water‑pump when needed. Current conditions are shown on a 16×2 LCD and logged for later analysis.
 
 ---
 
-## 🛠 Hardware
+## 🛠️ Hardware Bill of Materials
 
-| Qty | Part                                   | Notes                                               |
-| --- | -------------------------------------- | --------------------------------------------------- |
-| 1   | PCF8591 breakout module                | Often labelled “Analog‑to‑Digital Converter Module” |
-| 1   | Raspberry Pi + micro‑SD + PSU          | Any model with I²C pins (SDA/SCL)                   |
-| n   | Analog sensors (pot, LDR, thermistor…) | 0–3.3 V range preferred                             |
-| —   | Breadboard & jumper wires              |                                                     |
+| Qty | Component                           | Purpose                                                                    |
+| --- | ----------------------------------- | -------------------------------------------------------------------------- |
+| 1   | **Raspberry Pi 4** (any RAM)        | Brains of the system; runs Python controller & provides Wi‑Fi / networking |
+| 1   | **Capacitive soil‑moisture sensor** | Reads volumetric water content of soil                                     |
+| 1   | **DHT‑11 temp & humidity sensor**   | Tracks ambient climate around the plant                                    |
+| 1   | **5 V micro water pump** + tubing   | Delivers water from reservoir to plant                                     |
+| 1   | **1‑channel 5 V relay module**      | Switches the pump on/off safely                                            |
+| 1   | **16 × 2 I²C LCD display**          | Shows live values & pump status                                            |
+| 1   | **LED (green)** + 330 Ω resistor    | Blinks when pump runs                                                      |
+| 1   | 220µF electrolytic **capacitor**    | Smooths pump inrush current                                                |
+| 1   | 5 V ⎓ **DC power supply** (2 A+)    | Feeds Pi + pump (or use separate rails)                                    |
+| —   | Jumper **wires**, breadboard or PCB | Connections                                                                |
 
-👉 **Pinout:**
+> **Optional:** PCF8591 ADC if using an analog moisture probe.
+
+---
+
+## 📐 Wiring Overview
 
 ```
-PCF8591        Raspberry Pi (BCM)
-———           ————————————————
-VCC   ↔  3V3   (pin 1)
-GND   ↔  GND   (pin 6)
-SDA   ↔  SDA1  (GPIO 2, pin 3)
-SCL   ↔  SCL1  (GPIO 3, pin 5)
-A0‑A2 ↔  GND   (keep at default 0×48 address)
+DHT‑11       → Pi GPIO 4 (data) + 5 V + GND
+Moisture Sns → Pi GPIO 18 (analog via ADC) / or direct digital pin
+Relay IN     → Pi GPIO 23
+Relay VCC/GND→ 5 V / GND
+Pump 5 V     → Relay COM → 5 V supply
+Pump GND     → GND (through 470 µF cap across pump leads)
+LCD SDA/SCL  → Pi SDA1/SCL1 (GPIO 2/3) 5 V tolerant
+LED anode    → Pi GPIO 24 through 330 Ω → LED cathode → GND
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🖥️ Software
 
-### 1 · Enable I²C & reboot
+### Requirements
 
 ```bash
-sudo raspi-config  # Interface Options ▶ I2C ▶ Enable
-sudo reboot
+sudo apt update && sudo apt install -y python3-pip i2c-tools git
+pip3 install RPi.GPIO smbus2 adafruit-circuitpython-dht
 ```
-
-### 2 · Install tools & libraries
-
-```bash
-sudo apt update && sudo apt install -y i2c-tools python3-smbus2 git
-```
-
-### 3 · Clone this repo
-
-```bash
-git clone https://github.com/your‑username/pcf8591‑examples.git
-cd pcf8591‑examples
-```
-
-### 4 · Detect the board
-
-```bash
-sudo i2cdetect -y 1    # look for 0x48–0x4F
-```
-
-> Expected output includes **`48`** in the 0x40–0x4F row. If you don’t see it, check power and wiring.
-
-### 5 · Run the demo
-
-```bash
-python3 read_analog.py --address 0x48 --channel 0
-```
-
-You should see a stream of raw 8‑bit values (0–255) that change as you turn a potentiometer or cover the LDR.
-
 ---
 
-## 📄 Repository Layout
+## 🔧 Configuration
 
-```
-.
-├─ read_analog.py      # main example script
-├─ dac_sawtooth.py     # demonstrates the DAC output
-├─ images/             # wiring diagrams & screenshots
-└─ LICENSE
+```yaml
+sampling_interval: 1       # seconds between sensor reads
+pump_time: 1               # seconds pump stays on
 ```
 
 ---
 
-## 🤔 How It Works
+## 🛠️ Troubleshooting
 
-* The PCF8591 appears on the I²C bus with a 7‑bit address of **0x48** by default.
-* To read channel *N*, we write the control byte `0x40 | N` then perform a dummy read followed by the real conversion result.
-* The example uses **`smbus2`** for repeated‑start combined write/read, ensuring glitch‑free sampling.
-
-See the inline comments in `read_analog.py` for the gory details.
-
----
-
-## 🐞 Troubleshooting
-
-| Symptom                      | Fix                                                        |
-| ---------------------------- | ---------------------------------------------------------- |
-| `i2cdetect` shows all `--`   | Check SDA/SCL wiring, enable I²C in `raspi-config`         |
-| `Errno 121 Remote I/O error` | Wrong address, floating A0–A2 pins, or 5 V on the module   |
-| Readings stuck at 255 or 0   | Sensor voltage outside 0–3.3 V range, or unconnected input |
+| Symptom                      | Check                                                |
+| ---------------------------- | ---------------------------------------------------- |
+| `i2cdetect` shows no devices | Enable I²C in `raspi-config`; check SDA/SCL pull‑ups |
+| Pump never starts            | Verify relay wiring & `GPIO 23`; watch LED           |
+| Pi stopps whenever pump work | Add 220µF capacitor to the LCD and pump              |
+| LCD gibberish or blank       | Confirm I²C address in `lcd.py` (0x27/0x3F)          |
 
 ---
 
-## 🤝 Contributing
-
-Pull requests are welcome! Please open an issue first if you plan a large change so we can discuss the best approach.
-
----
-
-## 📜 License
-
-This project is licensed under the MIT License – see `LICENSE` for details.
+Built to Zataar green 💚.
