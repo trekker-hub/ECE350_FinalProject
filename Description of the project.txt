@@ -1,0 +1,15 @@
+This project currently is a watering system for plant. A DHT-11 will read the humidity and the temperature, and the moisture sensor will determine if the soil is wet or not. Based on this indication the Pi will decide if the plant need to be watered or not. 
+
+
+
+
+The goal of this project is not just to water an plant out, the goal is to make the pi work based on a specific settings the user indicates. For our example, The plant is Zataar from the Middle East, and it grows in the desert. Therefore, temperature and humidity is not a huge factor of its growth. Followingly, The tie break for whether the plant should be watered or not was the moisture sensor. 
+
+The upcoming updates will be the following. 
+1. Adding a delay in watering. 
+	=> For some plant, it is harmfull to keep it watered all the time. Therefore delay will be added in case of need. 
+2. Simple interface to get input from the user
+	=> Make it easier for user to implement and faster to set up, instead of editing the code
+3. Drying system 
+	=> In case of cold weather, raining, or other factor. There will be further lights and sensors to determine the needed action whether the plant need water or need to be warmed up or dried out. 
+
