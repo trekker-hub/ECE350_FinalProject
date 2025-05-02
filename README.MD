@@ -70,4 +70,4 @@ pump_time: 1               # seconds pump stays on
 
 ---
 
-Built to Zataar green 💚.
+Built to keep Zataar green 💚.
